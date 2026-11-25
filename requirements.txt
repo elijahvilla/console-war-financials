@@ -1,0 +1,7 @@
+requests
+python-dotenv
+duckdb
+openpyxl
+matplotlib
+pyyaml
+pytest
