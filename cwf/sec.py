@@ -27,10 +27,14 @@ def _cache_path(cache_dir: Path, url: str) -> Path:
     return Path(cache_dir) / hashlib.sha256(url.encode("utf-8")).hexdigest()
 
 
-def cached_get(url: str, cache_dir: Path = Path("data/cache"), session=None, offline: bool = False) -> bytes:
-    """Plain cached GET for non-SEC sources (FRED needs no contact header)."""
+def cached_get(url: str, cache_dir: Path = Path("data/cache"), session=None, offline: bool = False,
+               refresh: bool = False) -> bytes:
+    """Plain cached GET for non-SEC sources (FRED needs no contact header).
+
+    refresh=True re-downloads when online (for data that changes, like a daily rate series).
+    """
     path = _cache_path(cache_dir, url)
-    if path.exists():
+    if path.exists() and (offline or not refresh):
         return path.read_bytes()
     if offline:
         raise SecError(f"offline and not cached: {url}")
@@ -72,9 +76,10 @@ class SecClient:
                 self._sleep(wait)
         self._last = self._clock()
 
-    def get(self, url: str) -> bytes:
+    def get(self, url: str, refresh: bool = False) -> bytes:
+        """refresh=True re-downloads when online: for lists that grow (submissions), not for filed documents."""
         path = _cache_path(self.cache_dir, url)
-        if path.exists():
+        if path.exists() and (self.offline or not refresh):
             return path.read_bytes()
         if self.offline:
             raise SecError(f"offline and not cached: {url}")
@@ -91,5 +96,5 @@ class SecClient:
             self._sleep(2 ** attempt)
         raise SecError(f"unreachable: {url}")
 
-    def get_json(self, url: str) -> dict:
-        return json.loads(self.get(url))
+    def get_json(self, url: str, refresh: bool = False) -> dict:
+        return json.loads(self.get(url, refresh=refresh))

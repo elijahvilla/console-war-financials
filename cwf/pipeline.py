@@ -29,7 +29,7 @@ def run(cache_dir: Path = ROOT / "data" / "cache", reports_dir: Path = ROOT / "r
         filings[company] = len(found)
         for f in found:
             rows += extract(f, parse_instance(client.get(f.instance_url)))
-    fx = load_dexjpus(partial(cached_get, cache_dir=cache_dir, offline=offline))
+    fx = load_dexjpus(partial(cached_get, cache_dir=cache_dir, offline=offline, refresh=True))  # rates update daily
     con = build(rows, fx, db_path)
     run_checks(con)  # raises DataQualityError listing every problem
     write_report(con, Path(reports_dir) / "console_war_financials.xlsx")

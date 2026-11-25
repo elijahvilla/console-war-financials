@@ -31,10 +31,11 @@ def _pick_instance(names: list[str]) -> str | None:
 
 def list_annual_filings(client, company: str, since_report_year: int = 2015) -> list[Filing]:
     cik, form = COMPANIES[company]
-    sub = client.get_json(f"https://data.sec.gov/submissions/CIK{cik}.json")
+    # Submission lists grow with every new filing, so always re-fetch them online; archived filings never change.
+    sub = client.get_json(f"https://data.sec.gov/submissions/CIK{cik}.json", refresh=True)
     rows = list(_rows(sub["filings"]["recent"]))
     for page in sub["filings"].get("files", []):
-        rows += list(_rows(client.get_json(f"https://data.sec.gov/submissions/{page['name']}")))
+        rows += list(_rows(client.get_json(f"https://data.sec.gov/submissions/{page['name']}", refresh=True)))
     out = {}
     for f, acc, filed, report in rows:
         if f != form or not report or date.fromisoformat(report).year < since_report_year:

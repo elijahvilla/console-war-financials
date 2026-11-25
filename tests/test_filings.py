@@ -13,7 +13,7 @@ class FakeClient:
     def __init__(self, pages):
         self.pages = pages
 
-    def get_json(self, url):
+    def get_json(self, url, refresh=False):
         return json.loads(self.pages[url])
 
 
@@ -62,3 +62,16 @@ def test_excludes_amendments():
     fs = list_annual_filings(FakeClient(sony_pages()), "sony", since_report_year=2015)
     assert all("25-000009" not in f.accession for f in fs)
     assert all(f.company == "sony" for f in fs)
+
+
+def test_submission_lists_are_refreshed_archives_are_not():
+    seen = []
+
+    class Recording(FakeClient):
+        def get_json(self, url, refresh=False):
+            seen.append((url, refresh))
+            return super().get_json(url)
+
+    list_annual_filings(Recording(sony_pages()), "sony", since_report_year=2015)
+    assert all(r for u, r in seen if "/submissions/" in u)
+    assert not any(r for u, r in seen if "/Archives/" in u)

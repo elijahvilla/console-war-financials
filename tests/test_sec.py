@@ -79,3 +79,26 @@ def test_gives_up_after_retries(tmp_path):
     with pytest.raises(SecError):
         c.get("https://www.sec.gov/r")
     assert len(s.calls) == 4
+
+
+def test_refresh_refetches_when_online(tmp_path):
+    c, s, _ = make(tmp_path, [FakeResp(200, b"old"), FakeResp(200, b"new")])
+    assert c.get("https://data.sec.gov/submissions/CIK1.json") == b"old"
+    assert c.get("https://data.sec.gov/submissions/CIK1.json", refresh=True) == b"new"
+    assert c.get("https://data.sec.gov/submissions/CIK1.json") == b"new"
+
+
+def test_refresh_uses_cache_when_offline(tmp_path):
+    c, s, _ = make(tmp_path, [FakeResp(200, b"old")])
+    c.get("https://data.sec.gov/submissions/CIK1.json")
+    c.offline = True
+    assert c.get("https://data.sec.gov/submissions/CIK1.json", refresh=True) == b"old"
+    assert len(s.calls) == 1
+
+
+def test_cached_get_refresh(tmp_path):
+    from cwf.sec import cached_get
+    s = FakeSession([FakeResp(200, b"v1"), FakeResp(200, b"v2")])
+    assert cached_get("https://fred.example/x", tmp_path, session=s) == b"v1"
+    assert cached_get("https://fred.example/x", tmp_path, session=s, refresh=True) == b"v2"
+    assert cached_get("https://fred.example/x", tmp_path, session=s, offline=True, refresh=True) == b"v2"
