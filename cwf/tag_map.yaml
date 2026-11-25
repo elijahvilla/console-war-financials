@@ -1,0 +1,58 @@
+# Which XBRL facts are which metric. Names are local (no prefix). Built from `python -m cwf.explore` against
+# every 10-K / 20-F (source filings listed in the build ledger). A fact matches a rule if its concept is listed,
+# every required axis carries one of the listed members, and it has exactly `exactly_dims` dimensions.
+microsoft:
+  revenue:
+    - concepts: [RevenueFromContractWithCustomerExcludingAssessedTax]
+      require: {ProductOrServiceAxis: [GamingMember, XBOXMember]}   # renamed Gaming -> XBOX in the FY2026 10-K
+      exactly_dims: 1
+sony:
+  revenue:            # segment total incl. intersegment sales
+    - concepts: [Revenues, RevenueFromContractWithCustomerExcludingAssessedTax]   # US GAAP (to FY2021)
+      require: {StatementBusinessSegmentsAxis: [GameAndNetworkServicesMember], ConsolidationItemsAxis: [OperatingSegmentsMember]}
+      exactly_dims: 2
+    - concepts: [Revenue]                                                         # IFRS (FY2021+)
+      require: {SegmentsAxis: [GameAndNetworkServicesMember], SegmentConsolidationItemsAxis: [OperatingSegmentsMember]}
+      exactly_dims: 2
+  revenue_external:   # sales to outside customers; the product buckets sum to this
+    - concepts: [Revenues, RevenueFromContractWithCustomerExcludingAssessedTax]
+      require: {StatementBusinessSegmentsAxis: [GameAndNetworkServicesMember]}
+      exactly_dims: 1
+    - concepts: [Revenue]
+      require: {SegmentsAxis: [GameAndNetworkServicesMember], SegmentConsolidationItemsAxis: [OperatingSegmentsMember], SalesChannelsAxis: [ExternalCustomersMember]}
+      exactly_dims: 3
+  operating_income:
+    - concepts: [OperatingIncomeLoss]
+      require: {StatementBusinessSegmentsAxis: [GameAndNetworkServicesMember], ConsolidationItemsAxis: [OperatingSegmentsMember]}
+      exactly_dims: 2
+    - concepts: [ProfitLossFromOperatingActivities]
+      require: {SegmentsAxis: [GameAndNetworkServicesMember], SegmentConsolidationItemsAxis: [OperatingSegmentsMember]}
+      exactly_dims: 2
+  # Product buckets: FY2017+ only (ASC 606 / IFRS concepts). Before that, "Network" meant digital software + network.
+  rev_digital_software:
+    - concepts: [RevenueFromContractWithCustomerExcludingAssessedTax]
+      require: {StatementBusinessSegmentsAxis: [GameAndNetworkServicesMember], ProductOrServiceAxis: [DigitalServicesMember]}
+      exactly_dims: 2
+    - concepts: [Revenue]
+      require: {SegmentsAxis: [GameAndNetworkServicesMember], ProductsAndServicesAxis: [DigitalSoftwareAndAddOnContentMember], SalesChannelsAxis: [ExternalCustomersMember]}
+      exactly_dims: 4
+  rev_network_services:
+    - concepts: [RevenueFromContractWithCustomerExcludingAssessedTax]
+      require: {StatementBusinessSegmentsAxis: [GameAndNetworkServicesMember], ProductOrServiceAxis: [NetworkServicesMember, NetworkMember]}
+      exactly_dims: 2
+    - concepts: [Revenue]
+      require: {SegmentsAxis: [GameAndNetworkServicesMember], ProductsAndServicesAxis: [NetworkServicesMember], SalesChannelsAxis: [ExternalCustomersMember]}
+      exactly_dims: 4
+  rev_hardware_other:
+    - concepts: [RevenueFromContractWithCustomerExcludingAssessedTax]
+      require: {StatementBusinessSegmentsAxis: [GameAndNetworkServicesMember], ProductOrServiceAxis: [HardwareAndOthersMember, HardwareAndOtherProductsAndServicesMember]}
+      exactly_dims: 2
+    - concepts: [Revenue]
+      require: {SegmentsAxis: [GameAndNetworkServicesMember], ProductsAndServicesAxis: [HardwareAndOthersMember], SalesChannelsAxis: [ExternalCustomersMember]}
+      exactly_dims: 4
+basis:
+  Revenues: us-gaap
+  RevenueFromContractWithCustomerExcludingAssessedTax: us-gaap
+  OperatingIncomeLoss: us-gaap
+  Revenue: ifrs
+  ProfitLossFromOperatingActivities: ifrs
