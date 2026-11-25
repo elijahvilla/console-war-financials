@@ -1,0 +1,35 @@
+name: Monthly refresh
+
+on:
+  schedule:
+    - cron: "0 12 3 * *"   # 12:00 UTC on the 3rd of every month
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q
+      - name: Rebuild from SEC filings
+        env:
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+        run: python -m cwf.pipeline
+      - name: Commit updated outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports docs/*.png
+          if git diff --cached --quiet; then
+            echo "No new filings; nothing to commit."
+          else
+            git commit -m "Monthly refresh: new SEC filing data"
+            git push
+          fi
